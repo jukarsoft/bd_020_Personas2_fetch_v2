@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<meta charset="utf-8">
+	<style type="text/css">
+		label {width: 70px; display: inline-block;}
+		form {width: 45%;margin:auto;padding:20px;border: 2px solid gold}
+		table, th, td {border: 1px solid blue;margin:auto;padding:2px 5px;}
+		input#entidad, input#oficina {width: 40px;}
+		input#dc {width: 20px;}
+		input#titular {width: 400px;}
+		h4 {width: 200px;}
+	</style>
+	<!-- libreria JQuery-->
+	<script type="text/javascript" src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+	<script type="text/javascript">
+		//comprobar si llega el id del titular
+		//recuperar la url
+		var url=window.location.href;
+		//buscar si existe el parametro id
+		var posicionId=url.indexOf('pk=');
+		//si no existe retornamos a la pantalla de titulares
+		if (posicionId==-1) {
+			window.location.href = 'bd_020_personas.html';
+		} else {
+			//si existe recuperamos el id de la persona
+			var idpersona=url.substring(posicionId+3);
+			//alert (idpersona);
+			consultaPersona(idpersona);
+		}
+		
+		//activar listeners
+		window.onload=function() {
+			//activar listener	
+			document.getElementById('alta').addEventListener('click', altaCuenta);
+			document.getElementById('modificar').addEventListener('click', modificarCuenta);
+			document.getElementById('borrar').addEventListener('click', borrarCuenta);
+			document.getElementById('volver').addEventListener('click', volveraFormularioPersonas);
+			document.getElementById('modificar').style.display='none'; 
+			document.getElementById('borrar').style.display='none'; 
+			
+			//carga las cuentas de la persona consultada
+			consultaCuentas();
+		}
+
+		function volveraFormularioPersonas() {
+			//alert ('volveraFormularioPersonas');
+			window.location.href='bd_020_personas.html';
+		}	
+
+		//consulta para obtener la persona
+		function consultaPersona(idpersona) {
+			//alert ("consultaPersona");
+			var datos = new FormData();
+			datos.append('pk',idpersona);
+			fetch('consultaPersonaSeleccionada.php',{
+				method: 'POST',
+				body: datos
+			})
+			.then(function(respuesta) {
+				//primera respuesta del servidor como que ha recibido la petición
+				if (respuesta.ok) {
+					return respuesta.json();
+				} else {
+					throw "error en la llamada AJAX",88;
+				}
+			})
+			. then (function(datos) {
+				//servidor a procesado los datos y nos lo devuelve
+				//alert (datos);
+					for (i in datos) {
+						document.getElementById('titular').value=datos[i]['nombre'] + ' ' + datos[i]['apellidos'];
+					}
+			})
+			.catch(function(error) {
+				//captura de los errores
+				if (error.codigo!='00') {
+					alert ('error:' + error.codigo + ' ' + error.mensaje);
+				} 
+			})
+		}
+
+		//Alta de una cuenta
+		function altaCuenta() {
+			//alert ('altaCuenta');
+			//formateo datos o encapsulado de datos al servidor 
+			//para enviar al servidor clave:pareja:valor
+			//creamos un objeto
+			entidad=document.getElementById('entidad').value;
+			oficina=document.getElementById('oficina').value;
+			dc=document.getElementById('dc').value;
+			cuenta=document.getElementById('cuenta').value;
+			saldo=document.getElementById('saldo').value;
+			var datos = new FormData();
+			datos.append('pk',idpersona);
+			datos.append('entidad',entidad);
+			datos.append('oficina',oficina);
+			datos.append('dc',dc);
+			datos.append('cuenta',cuenta);
+			datos.append('saldo', saldo);
+			
+			//llamada AJAX al servidor
+			fetch('alta_cuenta.php',{
+				method: 'POST',
+				body: datos
+			})
+			.then(function(respuesta) {
+				//primera respuesta del servidor como que ha recibido la petición
+				if (respuesta.ok) {
+					return respuesta.json();
+				} else {
+					throw "error en la llamada AJAX",88;
+				}
+			})
+			. then (function(datos) {
+				//servidor a procesado los datos y nos lo devuelve
+				//alert (datos);
+				if (datos.codigo=='00') {
+					alert (datos.mensaje);
+					document.getElementById('entidad').value="";
+					document.getElementById('oficina').value="";
+					document.getElementById('dc').value="";
+					document.getElementById('cuenta').value="";
+					document.getElementById('saldo').value="";
+					
+					//alert ('complete');
+				} else {
+					alert ('error: ' + datos.codigo + '' + datos.mensaje);
+				}
+				consultaCuentas();
+			})
+			.catch(function(error) {
+				//captura de los errores
+				//alert (error);
+				if (error.codigo!='00') {
+					alert ('error:' + error.codigo + ' ' + error.mensaje);
+				} 
+			})
+	}
+	//Obtener la relación de las cuentas de una persona
+	function consultaCuentas() {
+		//alert ('consultaCuentas');
+		document.getElementById('listacuentas').innerHTML="";
+		
+		var datos = new FormData();
+		datos.append('fk',idpersona);
+		//alert (idpersona);
+		fetch ('consultaCuentasPersona.php', {
+			method: 'POST',
+			body: datos
+		})
+		.then(function(respuesta) {
+			if (respuesta.ok) {
+				//cambiar el json a text, si queremos ver el error
+				return respuesta.json();
+			} else {
+				throw "error en la llamada AJAX",88;
+			}
+		})
+		.then(function(datos) {
+			//datos es un array js
+			//alert (datos);
+			var tabla="<tr><th>id</th><th>entidad</th><th>oficina</th><th>dc</th><th>cuenta</th><th>saldo</th></tr>";
+			for (i in datos) {
+				tabla+="<tr class='tr'>";
+					tabla+=`<td class='id'>${datos[i]['idcuentas']}</td>`;
+					tabla+=`<td>${datos[i]['entidad']}</td>`;
+										//tabla+=`<td>${datos[i].nif}</td>`; //otra manera de recoger el objeto
+					tabla+=`<td>${datos[i]['oficina']}</td>`;
+					tabla+=`<td>${datos[i]['dc']}</td>`;
+					tabla+=`<td>${datos[i]['numcuenta']}</td>`;
+					tabla+=`<td>${datos[i]['saldo']}</td>`;
+					//tabla+=`<td type='hidden' class='pk'>${datos[i]['pk_personas']}</td>`;
+					
+				tabla+="</tr>";
+				
+			}
+			document.getElementById('listacuentas').innerHTML+=tabla;
+			//se activa por cada linea de registro ('tr') class='tr' un listener
+			 var fila=document.querySelectorAll('.tr');
+			for (i=0;i<fila.length;i++) {
+				fila[i].addEventListener('click', consultaCuenta);
+				fila[i].style.cursor="pointer";
+			}
+
+			console.log(datos);
+		})
+		.catch(function (error) {
+			if (error.codigo!='00') {
+				alert ('error:' + error.codigo + ' ' + error.mensaje);
+			}
+		})
+
+	}
+	//Obtener una cuenta
+	function consultaCuenta() {
+		//alert('consultaCuenta')
+		//recuperar el id cuenta
+		var idcuenta=this.firstChild.innerText;
+		var datos = new FormData();
+		datos.append('idcuenta',idcuenta);
+		//alert (idcuenta);
+		fetch ('consultaCuentaPersona.php', {
+			method: 'POST',
+			body: datos
+		})
+		.then(function(respuesta) {
+			if (respuesta.ok) {
+				//cambiar el json a text, si queremos ver el error
+				return respuesta.json();
+			} else {
+				throw "error en la llamada AJAX",88;
+			}
+		})
+		.then(function(datos) {
+			//datos es un array js
+			//alert (datos);
+			for (i in datos) {
+				document.getElementById('entidad').value=datos[i]['entidad'];
+				document.getElementById('oficina').value=datos[i]['oficina'];
+				document.getElementById('dc').value=datos[i]['dc'];
+				document.getElementById('cuenta').value=datos[i]['numcuenta'];
+				document.getElementById('saldo').value=datos[i]['saldo'];
+				document.getElementById('idcuenta').value=datos[i]['idcuentas'];
+				
+			}
+			document.getElementById('modificar').style.display='initial'; 
+			document.getElementById('borrar').style.display='initial'; 
+		})
+		.catch(function (error) {
+			if (error.codigo!='00') {
+				alert ('error:' + error.codigo + ' ' + error.mensaje);
+			}
+		})
+		
+	}
+
+	function modificarCuenta() {
+		//alert ('modificarCuenta');
+		var entidad = document.getElementById('entidad').value;
+		var oficina = document.getElementById('oficina').value;
+		var dc = document.getElementById('dc').value;
+		var cuenta = document.getElementById('cuenta').value;
+		var saldo = document.getElementById('saldo').value;
+		var idcuenta = document.getElementById('idcuenta').value;
+
+		if (idcuenta=='') {
+			alert ("hay que seleccionar previamente una cuenta");
+			return
+		}
+
+		var datos = new FormData();
+		datos.append('idcuenta',idcuenta);
+		datos.append('entidad',entidad);
+		datos.append('oficina',oficina);
+		datos.append('dc',dc);
+		datos.append('cuenta',cuenta);
+		datos.append('saldo',saldo);
+		
+	
+		//llamada AJAX al servidor
+		fetch('modificarCuenta.php',{
+			method: 'POST',
+			body: datos
+		})
+		.then(function(respuesta) {
+			//primera respuesta del servidor como que ha recibido la petición
+			if (respuesta.ok) {
+				return respuesta.json();
+			} else {
+				throw "error en la llamada AJAX",88;
+			}
+		})
+		. then (function(datos) {
+			//servidor a procesado los datos y nos lo devuelve
+			//alert (datos);
+			if (datos.codigo=='00' ) {
+				alert (datos.codigo + ' ' + datos.mensaje);
+				document.getElementById('formulario').reset();
+				document.getElementById('modificar').style.display='none'; 
+				document.getElementById('borrar').style.display='none'; 
+				document.getElementById('alta').style.display='initial'; 
+				//alert ('complete');
+			} else {
+				alert ('error:' + error.codigo + ' ' + error.mensaje);
+			}
+			consultaCuentas();
+		})
+		.catch(function(error) {
+			//captura de los errores
+			//alert (error);
+			if (error.codigo!='00') {
+				alert ('error:' + error.codigo + ' ' + error.mensaje);
+			}
+		})
+
+	}
+	//borrar cuenta
+	function borrarCuenta() {
+		//alert ('borrarCuenta');
+		var idcuenta=document.getElementById('idcuenta').value;
+		//validar si hay seleccionado una persona
+		if (idcuenta=='') { 
+			return
+		}
+		if (confirm('estas seguro?')) {
+			var datos = new FormData();
+			datos.append('idcuenta',idcuenta);
+			fetch('borrarCuentaSeleccionada.php',{
+				method: 'POST',
+				body: datos
+			})
+			.then(function(respuesta) {
+				//primera respuesta del servidor como que ha recibido la petición
+				if (respuesta.ok) {
+					return respuesta.json();
+				} else {
+					throw "error en la llamada AJAX";
+				}
+			})
+			. then (function(datos) {
+				//servidor a procesado los datos y nos lo devuelve
+				//alert (datos);
+				if (datos.codigo !='00'){
+					alert ('error:' + datos.codigo + ' ' + datos.mensaje);
+					return
+				}
+				consultaCuentas();
+				document.getElementById('formulario').reset();
+
+				document.getElementById('modificar').style.display='none'; 
+				document.getElementById('borrar').style.display='none'; 
+				document.getElementById('alta').style.display='initial'; 
+				alert ('cuenta seleccionada dada de baja');
+				
+				//document.getElementById('modificar').disabled=true;
+				//document.getElementById('borrar').disabled=true;
+				//document.getElementById('enviar').disabled=false;
+				
+			})
+			.catch(function(error) {
+				//captura de los errores
+				//alert (error);
+				if (error.codigo!='00') {
+					alert ('error:' + error.codigo + ' ' + error.mensaje);
+				} 
+			})
+		}
+	}
+
+
+	</script>
+</head>
+<body>
+	<form id="cabecera">
+		<label><h4>Titular de la cuenta</h4></label><br>
+		<input type="text" id="titular" disabled><br><br>
+		<input type="button" id="volver" value='ir a formulario personas'>
+		<br><br>
+	</form>
+	<form id='formulario'>
+		<label>Cuenta</label>
+		<input type="text" id="entidad">
+		<input type="text" id="oficina">
+		<input type="text" id="dc">
+		<input type="text" id="cuenta" disabled="true">
+		<br><br>
+		<label>Saldo</label>
+		<input type="number" id="saldo">
+		<input type="hidden" id="idcuenta">
+		<br><br>
+		<label></label>
+		<input type="button" id="alta" value='alta'>
+		<input type="button" id="modificar" value='modificar'>
+		<input type="button" id="borrar" value='borrar'>
+	</form>
+	<br><br>
+	<table id='listacuentas'>
+		
+	</table>
+</body>
+</html>

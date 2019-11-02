@@ -1,0 +1,9 @@
+body {font-family: arial;}
+section {margin: auto; width: 50%;background-color: lightgreen;}
+form {margin: 15px; display: inline-block; }
+label {width: 150px; display: inline-block;}
+input[type='text'] {width: 300px;}
+table {border: 5px ridge blue; width: 450px; margin:15px;}
+th, td {border: 2px solid blue; text-align: center; margin:15px;}
+.error {background-color: yellow;}
+h1 {margin: 15px;}
